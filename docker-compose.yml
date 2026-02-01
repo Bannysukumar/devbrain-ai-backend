@@ -1,0 +1,60 @@
+services:
+  redis:
+    container_name: redis
+    image: redis/redis-stack-server:latest
+    ports:
+      - "127.0.0.1:6378:6379"
+    volumes:
+      - redis-data:/data
+    environment:
+      - REDIS_ARGS=--appendonly yes
+
+  postgres:
+    container_name: postgres
+    image: pgvector/pgvector:pg17
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-ragpi}
+
+  api:
+    container_name: api
+    build: .
+    volumes:
+      - .:/app
+    command: fastapi dev src/main.py --host 0.0.0.0 --port 8000
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      - redis
+      - postgres
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - POSTGRES_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-ragpi}
+    env_file: .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    
+  task-worker:
+    container_name: task-worker
+    build: .
+    command: watchfiles --filter python "celery --app=src.celery.celery_app worker --concurrency=2 --loglevel=INFO" src
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+      - postgres
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - POSTGRES_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-ragpi}
+    env_file: .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  redis-data:
+  postgres-data:
