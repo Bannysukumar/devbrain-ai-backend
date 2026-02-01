@@ -1,365 +1,320 @@
-<div align="center">
+# Ragpi
 
-# 🚀 Devbrain AI Backend
+An open-source AI assistant that answers questions using your documentation. Ragpi enables you to build a RAG (Retrieval-Augmented Generation) system that can ingest content from various sources and provide intelligent answers based on your documents.
 
-**An Intelligent AI Assistant Powered by RAG Technology**
+## Features
 
-*Transform your documentation, GitHub issues, and READMEs into an intelligent knowledge base*
+- 🔌 **Multiple Connectors**: Support for various data sources including:
+  - Sitemap crawling
+  - GitHub Issues
+  - GitHub README files
+  - GitHub PDF files
+  - REST API endpoints
 
-[![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.114+-green.svg)](https://fastapi.tiangolo.com/)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://www.docker.com/)
+- 🧠 **RAG-Powered Chat**: Intelligent question-answering using retrieval-augmented generation
+- 📊 **Flexible Storage**: Choose between PostgreSQL (with pgvector) or Redis for document storage
+- ⚡ **Background Processing**: Asynchronous task processing with Celery
+- 🔍 **Vector Search**: Semantic search capabilities with configurable embedding models
+- 🔐 **API Key Authentication**: Secure API access
+- 📈 **Observability**: Optional OpenTelemetry integration for monitoring
+- 🐳 **Docker Support**: Easy deployment with Docker Compose
 
-[Documentation](https://docs.ragpi.io) • [API Reference](https://docs.ragpi.io/api) • [Contributing](CONTRIBUTING.md)
-
-</div>
-
----
-
-## ✨ Overview
-
-**Ragpi** is an open-source, production-ready AI assistant that leverages Retrieval-Augmented Generation (RAG) to provide intelligent, context-aware answers from your documentation. Built with FastAPI and designed for scalability, Ragpi seamlessly integrates with multiple LLM providers and offers flexible deployment options.
-
-### 🎯 What Makes Ragpi Special?
-
-- **🧠 Agentic RAG System** - Dynamic document retrieval with intelligent context understanding
-- **🔌 Multi-Provider Support** - Works with OpenAI, Ollama, Deepseek, and any OpenAI-compatible API
-- **📦 Multiple Connectors** - Import from documentation sites, GitHub, REST APIs, and more
-- **💬 Built-in Integrations** - Discord, Slack, and Web Widget support out of the box
-- **🐳 Docker-Ready** - Deploy anywhere with containerized architecture
-- **⚡ Production-Grade** - Built with FastAPI, Redis, Celery, and PostgreSQL
-
----
-
-## 🎨 Key Features
-
-| Feature | Description |
-|---------|-------------|
-| 📚 **Knowledge Base Builder** | Automatically builds searchable knowledge bases from docs, GitHub issues, and READMEs |
-| 🤖 **Intelligent RAG** | Agentic system for dynamic document retrieval and context-aware responses |
-| 🔌 **Provider Flexibility** | Supports OpenAI, Ollama, Deepseek & OpenAI-Compatible models |
-| 💬 **Multi-Channel Support** | Discord and Slack integrations for seamless community support |
-| 🌐 **Web Widget** | Embed the assistant directly into your website |
-| 🚀 **API-First Design** | RESTful API with comprehensive documentation |
-| 🐳 **Easy Deployment** | Docker Compose configurations for development and production |
-
----
-
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
 - Python 3.11+
-- Docker and Docker Compose (recommended)
-- Redis (for caching and task queue)
-- PostgreSQL with pgvector extension (optional, for vector storage)
+- Docker and Docker Compose
+- Poetry (for dependency management)
+- OpenAI API key (or compatible provider)
 
 ### Installation
 
-#### Using Docker (Recommended)
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/ragpi/ragpi.git
+   cd ragpi
+   ```
 
-```bash
-# Clone the repository
-git clone <repository-url>
-cd ragpi
+2. **Install dependencies**:
+   ```bash
+   poetry install
+   ```
 
-# Start all services
-docker-compose up -d
+3. **Configure environment variables**:
+   ```bash
+   cp .env.example .env
+   ```
+   
+   Edit `.env` and add your API keys:
+   ```env
+   OPENAI_API_KEY=sk-your-api-key-here
+   RAGPI_API_KEY=your-secure-api-key
+   ```
 
-# The API will be available at http://localhost:8000
-```
+4. **Start services with Docker Compose**:
+   ```bash
+   docker compose up -d
+   ```
 
-#### Manual Installation
+   This starts:
+   - Redis on port 6378
+   - PostgreSQL with pgvector on port 5433
+   - FastAPI application on port 8000
+   - Celery worker for background tasks
 
-```bash
-# Install dependencies
-poetry install
+5. **Access the API**:
+   - API Documentation: http://localhost:8000/docs
+   - Health Check: http://localhost:8000/healthcheck
 
-# Set up environment variables
-cp .env.example .env
-# Edit .env with your configuration
+## Usage
 
-# Run the application
-poetry run uvicorn src.main:app --reload
-```
+### Creating a Source
 
----
-
-## 📖 Usage Guide
-
-### 1️⃣ Create a Source
-
-Set up a knowledge source using one of the available connectors:
+Add a data source to your Ragpi instance:
 
 ```bash
 curl -X POST "http://localhost:8000/sources" \
+  -H "X-API-Key: your-api-key" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "my-documentation",
-    "description": "Project documentation and guides",
-    "connector": {
-      "type": "sitemap",
-      "sitemap_url": "https://docs.example.com/sitemap.xml"
+    "name": "my-docs",
+    "connector_type": "sitemap",
+    "connector_config": {
+      "url": "https://example.com/sitemap.xml"
     }
   }'
 ```
 
-**Response:**
-```json
-{
-  "id": "source-123",
-  "name": "my-documentation",
-  "status": "syncing",
-  "created_at": "2024-01-15T10:00:00Z"
-}
-```
+### Chatting with Your Documents
 
-### 2️⃣ Monitor Synchronization
-
-Track the sync progress through the tasks endpoint:
-
-```bash
-curl "http://localhost:8000/tasks/{task_id}"
-```
-
-**Response:**
-```json
-{
-  "id": "task-456",
-  "status": "completed",
-  "source_id": "source-123",
-  "documents_synced": 150,
-  "progress": 100
-}
-```
-
-### 3️⃣ Chat with Your Assistant
-
-Query the AI assistant using your configured sources:
+Ask questions about your ingested documents:
 
 ```bash
 curl -X POST "http://localhost:8000/chat" \
+  -H "X-API-Key: your-api-key" \
   -H "Content-Type: application/json" \
   -d '{
-    "sources": ["my-documentation"],
-    "messages": [
-      {
-        "role": "user",
-        "content": "How do I deploy this project to production?"
-      }
-    ]
+    "message": "What is the main feature of this project?",
+    "source_names": ["my-docs"]
   }'
 ```
 
-**Response:**
+## Configuration
+
+### Environment Variables
+
+Key configuration options (see `src/config.py` for full list):
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `OPENAI_API_KEY` | OpenAI API key for chat and embeddings | Required |
+| `RAGPI_API_KEY` | API key for securing your Ragpi instance | Optional |
+| `REDIS_URL` | Redis connection URL | `redis://localhost:6379` |
+| `POSTGRES_URL` | PostgreSQL connection URL | `postgresql://localhost:5432/ragpi` |
+| `DOCUMENT_STORE_BACKEND` | Storage backend (`postgres` or `redis`) | `postgres` |
+| `CHAT_PROVIDER` | LLM provider for chat | `openai` |
+| `EMBEDDING_PROVIDER` | Provider for embeddings | `openai` |
+| `DEFAULT_CHAT_MODEL` | Chat model to use | `gpt-4o` |
+| `EMBEDDING_MODEL` | Embedding model to use | `text-embedding-3-small` |
+| `CHUNK_SIZE` | Document chunk size | `512` |
+| `CHUNK_OVERLAP` | Chunk overlap | `50` |
+| `WORKERS_ENABLED` | Enable background workers | `true` |
+
+### Supported LLM Providers
+
+Ragpi supports multiple LLM providers:
+
+- **OpenAI**: Default provider for chat and embeddings
+- **Ollama**: Local LLM support
+- **DeepSeek**: Alternative provider
+- **OpenAI-Compatible APIs**: Use any OpenAI-compatible endpoint
+
+See the [provider documentation](https://docs.ragpi.io/providers/overview) for configuration details.
+
+## Connector Types
+
+### Sitemap Connector
+
+Crawl websites using their sitemap:
+
 ```json
 {
-  "response": "To deploy the project to production, follow these steps:\n1. Set up your environment variables...",
-  "sources_used": ["my-documentation"],
-  "confidence": 0.95
+  "name": "website-docs",
+  "connector_type": "sitemap",
+  "connector_config": {
+    "url": "https://example.com/sitemap.xml"
+  }
 }
 ```
 
----
+### GitHub Issues Connector
 
-## 🔌 Connectors
+Ingest GitHub repository issues:
 
-Ragpi supports multiple connector types for importing knowledge:
-
-| Connector | Description | Use Case |
-|-----------|-------------|----------|
-| **🌐 Sitemap** | Crawls documentation websites via sitemap.xml | Documentation sites, blogs |
-| **🐙 GitHub Issues** | Imports GitHub repository issues | Project Q&A, bug reports |
-| **📄 GitHub README** | Extracts README files from repositories | Project documentation |
-| **📑 GitHub PDF** | Processes PDF files from GitHub | Technical documentation |
-| **🔗 REST API** | Fetches data from REST endpoints | Custom data sources |
-
-📚 [Explore all connectors →](https://docs.ragpi.io/connectors)
-
----
-
-## 🤖 LLM Providers
-
-Configure your preferred LLM provider for generating responses:
-
-| Provider | Status | Configuration |
-|----------|--------|---------------|
-| **OpenAI** | ✅ Default | API key required |
-| **Ollama** | ✅ Supported | Local/remote instance |
-| **Deepseek** | ✅ Supported | API key required |
-| **OpenAI-Compatible** | ✅ Supported | Custom endpoint |
-
-⚙️ [Configure providers →](https://docs.ragpi.io/providers/overview)
-
----
-
-## 🔗 Integrations
-
-### Discord Bot
-
-Add Ragpi to your Discord server for community support:
-
-```
-/invite @RagpiBot
+```json
+{
+  "name": "repo-issues",
+  "connector_type": "github_issues",
+  "connector_config": {
+    "owner": "owner",
+    "repo": "repository",
+    "labels": ["documentation"]
+  }
+}
 ```
 
-📖 [Discord Integration Guide →](https://docs.ragpi.io/integrations/discord)
+### GitHub README Connector
 
-### Slack App
+Extract README files from GitHub repositories:
 
-Install the Slack app for team-wide AI assistance:
-
-```
-/slack install ragpi
-```
-
-📖 [Slack Integration Guide →](https://docs.ragpi.io/integrations/slack)
-
-### Web Widget
-
-Embed the assistant directly into your website:
-
-```html
-<script src="https://cdn.ragpi.io/widget.js"></script>
-<div id="ragpi-widget"></div>
+```json
+{
+  "name": "repo-readme",
+  "connector_type": "github_readme",
+  "connector_config": {
+    "owner": "owner",
+    "repo": "repository"
+  }
+}
 ```
 
-📖 [Web Widget Guide →](https://docs.ragpi.io/integrations/web-widget)
+### GitHub PDF Connector
 
----
+Extract PDF files from GitHub repositories:
 
-## 🏗️ Architecture
-
-```
-┌─────────────┐     ┌──────────────┐     ┌─────────────┐
-│   FastAPI   │────▶│    Redis     │────▶│  PostgreSQL │
-│   Server    │     │  (Cache/Queue)│     │  (Vector DB)│
-└─────────────┘     └──────────────┘     └─────────────┘
-       │                    │
-       │                    │
-       ▼                    ▼
-┌─────────────┐     ┌──────────────┐
-│   Celery    │     │   Connectors │
-│   Workers   │     │   (Sync)     │
-└─────────────┘     └──────────────┘
+```json
+{
+  "name": "repo-pdfs",
+  "connector_type": "github_pdf",
+  "connector_config": {
+    "owner": "owner",
+    "repo": "repository",
+    "path": "docs"
+  }
+}
 ```
 
----
+### REST API Connector
 
-## 📁 Project Structure
+Ingest data from REST API endpoints:
+
+```json
+{
+  "name": "api-docs",
+  "connector_type": "rest_api",
+  "connector_config": {
+    "base_url": "https://api.example.com",
+    "endpoints": ["/docs", "/api/v1/guides"]
+  }
+}
+```
+
+## API Endpoints
+
+### Sources
+
+- `GET /sources` - List all sources
+- `POST /sources` - Create a new source
+- `GET /sources/{source_name}` - Get source details
+- `PUT /sources/{source_name}` - Update a source
+- `DELETE /sources/{source_name}` - Delete a source
+- `GET /sources/{source_name}/documents` - List documents in a source
+- `GET /sources/{source_name}/search` - Search documents in a source
+
+### Chat
+
+- `POST /chat` - Send a chat message and get AI response
+
+### Tasks
+
+- `GET /tasks/{task_id}` - Get task status
+
+### Health
+
+- `GET /healthcheck` - Health check endpoint
+
+See the interactive API documentation at `/docs` for detailed request/response schemas.
+
+## Development
+
+### Setup
+
+1. **Install development dependencies**:
+   ```bash
+   poetry install
+   poetry run pre-commit install
+   ```
+
+2. **Run tests**:
+   ```bash
+   poetry run pytest
+   ```
+
+3. **Run linting**:
+   ```bash
+   poetry run ruff check .
+   poetry run mypy .
+   ```
+
+### Project Structure
 
 ```
 ragpi/
 ├── src/
-│   ├── chat/           # Chat endpoints and services
+│   ├── chat/           # Chat service and endpoints
 │   ├── connectors/     # Data source connectors
-│   ├── document_store/ # Vector storage backends
-│   ├── llm_providers/  # LLM provider integrations
+│   ├── document_store/ # Document storage backends
 │   ├── sources/        # Source management
-│   └── tasks/          # Task tracking
+│   ├── tasks/          # Background task management
+│   ├── llm_providers/  # LLM provider integrations
+│   └── main.py         # FastAPI application
 ├── tests/              # Test suite
-├── docker-compose.yml  # Docker configuration
-└── pyproject.toml      # Python dependencies
+├── docker-compose.yml  # Development Docker setup
+└── pyproject.toml      # Project dependencies
 ```
 
----
+## Deployment
 
-## 🧪 Development
+### Production Deployment
 
-### Running Tests
+For production deployments, use the production Docker Compose file:
 
 ```bash
-# Run all tests
-poetry run pytest
-
-# Run with coverage
-poetry run pytest --cov=src --cov-report=html
-
-# Run specific test file
-poetry run pytest tests/unit/test_chat.py
+docker compose -f docker-compose.prod.yml up -d
 ```
 
-### Code Quality
+### aaPanel Deployment
 
-```bash
-# Format code
-poetry run ruff format .
+See [DEPLOYMENT-AAPANEL.md](DEPLOYMENT-AAPANEL.md) for detailed instructions on deploying to aaPanel servers.
 
-# Lint code
-poetry run ruff check .
+## Contributing
 
-# Type checking
-poetry run mypy src
-```
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on:
 
-### Pre-commit Hooks
+- Reporting bugs
+- Suggesting features
+- Submitting pull requests
+- Development setup
 
-```bash
-# Install pre-commit hooks
-poetry run pre-commit install
-```
+## License
 
----
+This project is licensed under the MIT License.
 
-## 🐳 Deployment
+## Version
 
-### Docker Compose (Production)
+Current version: **v0.3.x**
 
-```bash
-docker-compose -f docker-compose.prod.yml up -d
-```
+## Documentation
 
-### AA Panel Deployment
+For more detailed documentation, visit [https://docs.ragpi.io](https://docs.ragpi.io)
 
-See [DEPLOYMENT-AAPANEL.md](DEPLOYMENT-AAPANEL.md) for detailed instructions.
+## Support
+
+- GitHub Issues: [https://github.com/ragpi/ragpi/issues](https://github.com/ragpi/ragpi/issues)
+- Documentation: [https://docs.ragpi.io](https://docs.ragpi.io)
 
 ---
 
-## 📚 Documentation
+Built with ❤️ using FastAPI, PostgreSQL, Redis, and modern AI technologies.
 
-- 📖 [Full Documentation](https://docs.ragpi.io)
-- 🔌 [API Reference](https://docs.ragpi.io/api)
-- 🐙 [Connectors Guide](https://docs.ragpi.io/connectors)
-- 🤖 [Providers Guide](https://docs.ragpi.io/providers/overview)
-- 💬 [Integrations Guide](https://docs.ragpi.io/integrations)
-
----
-
-## 🤝 Contributing
-
-We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
-
-### How to Contribute
-
-1. 🍴 Fork the repository
-2. 🌿 Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. 💻 Make your changes
-4. ✅ Run tests and ensure code quality
-5. 📝 Commit your changes (`git commit -m 'Add amazing feature'`)
-6. 🚀 Push to the branch (`git push origin feature/amazing-feature`)
-7. 🔄 Open a Pull Request
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-## 🙏 Acknowledgments
-
-- Built with [FastAPI](https://fastapi.tiangolo.com/)
-- Vector storage powered by [pgvector](https://github.com/pgvector/pgvector)
-- Task queue managed by [Celery](https://docs.celeryq.dev/)
-
----
-
-<div align="center">
-
-**Made with ❤️ by the Ragpi Team**
-
-[⭐ Star us on GitHub](https://github.com/your-repo) • [📧 Report an Issue](https://github.com/your-repo/issues) • [💬 Join Discord](https://discord.gg/ragpi)
-
-</div>
