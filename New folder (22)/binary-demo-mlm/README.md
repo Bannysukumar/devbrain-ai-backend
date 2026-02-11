@@ -68,29 +68,33 @@ Open the URL shown (e.g. `http://localhost:5173`).
 
 User role is read from Firestore `users/{uid}`. New users have no doc yet, so they get default role `user` until Phase 2+ seeds or creates user docs.
 
-## Project structure (Phase 1)
+## Phase 2 — Firestore schema and security
+
+- **Collections:** `users`, `plans`, `orders`, `binaryStats`, `ledger`, `withdrawals`, `systemConfig`, `auditLogs`.
+- **TypeScript types** in `src/types/`: `UserDoc`, `PlanDoc`, `OrderDoc`, `BinaryStatsDoc`, `LedgerDoc`, `WithdrawalDoc`, `SystemConfigDoc`, `AuditLogDoc` (plus auth types). Re-exported from `src/types/index.ts`.
+- **Security rules** (`firestore.rules`):
+  - Users can **read** own `users/{uid}`, own `binaryStats/{uid}`, own `ledger`, own `withdrawals`.
+  - No client **write** to wallet/ledger/stats or users/orders; only Cloud Functions (admin SDK) write those.
+  - **Admins/superAdmins** can read all users and all withdrawals (rules use `request.auth.token.role`; custom claims must be set for admin/superAdmin — e.g. in Phase 3 bootstrap).
+  - Only **superAdmin** can write `plans` and `systemConfig`.
+  - **Audit logs** readable only by admin/superAdmin; written only by Cloud Functions.
+  - Users can **create** a withdrawal request (own uid, status `PENDING`); review/update only via Cloud Functions.
+
+**Firebase config:** `firebase.json` configures Firestore rules and emulators (Auth 9099, Firestore 8080, UI 4000). Deploy rules with `firebase deploy --only firestore:rules` (optional). Use emulators with `firebase emulators:start --only auth,firestore`.
+
+## Project structure (Phase 2)
 
 ```
 binary-demo-mlm/
+├── firebase.json         # Firestore rules path + emulator ports
+├── firestore.rules       # Security rules
 ├── src/
-│   ├── components/     # ProtectedRoute, RoleRoute
-│   ├── contexts/       # AuthContext
-│   ├── layouts/        # PublicLayout, AppLayout, AdminLayout
-│   ├── lib/            # firebase.ts (client init)
-│   ├── pages/          # Login, Register, AppDashboard, Admin, SuperAdmin
-│   ├── types/          # auth.ts (UserRole, AppUser)
-│   ├── App.tsx
-│   ├── main.tsx
-│   └── index.css
-├── .env.example
-├── package.json
-├── vite.config.ts
-└── README.md
+│   ├── types/            # auth, user, plan, order, binaryStats, ledger, withdrawal, systemConfig, auditLog, index
+│   └── ...               # (rest as Phase 1)
+└── ...
 ```
 
-## Next steps (Phase 2+)
+## Next steps (Phase 3+)
 
-- Add Firestore schema, security rules, and TypeScript models.
-- Add Cloud Functions and demo seeding.
-- Build user and admin UI for dashboard, tree, ledger, orders, withdrawals.
-- Implement business logic in Cloud Functions only (no client-side balance writes).
+- Add Cloud Functions (Node 20), demo seeding, and set Auth custom claims for admin/superAdmin.
+- Build user and admin UI; implement business logic in Cloud Functions only.

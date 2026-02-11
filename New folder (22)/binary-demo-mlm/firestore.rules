@@ -1,0 +1,74 @@
+rules_version = '2';
+// Binary Plan Demo — Phase 2
+// Clients never write wallet/ledger/stats; only Cloud Functions (admin SDK) do.
+// Role is expected in Firebase Auth custom claims (request.auth.token.role) for admin/superAdmin.
+
+function isAuthenticated() {
+  return request.auth != null;
+}
+
+function isAdmin() {
+  return isAuthenticated() && request.auth.token.role in ['admin', 'superAdmin'];
+}
+
+function isSuperAdmin() {
+  return isAuthenticated() && request.auth.token.role == 'superAdmin';
+}
+
+function isOwner(uid) {
+  return isAuthenticated() && request.auth.uid == uid;
+}
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Users: read own doc only; no client write (registration/updates via Cloud Functions)
+    match /users/{uid} {
+      allow read if isOwner(uid);
+      allow write if false;
+    }
+
+    // Plans: authenticated read; only superAdmin write
+    match /plans/{planId} {
+      allow read if isAuthenticated();
+      allow write if isSuperAdmin();
+    }
+
+    // Orders: read own; create/update via Cloud Functions only
+    match /orders/{orderId} {
+      allow read if isAuthenticated() && resource.data.uid == request.auth.uid;
+      allow list, create, update, delete if false;
+    }
+
+    // Binary stats: read own only; no client write
+    match /binaryStats/{uid} {
+      allow read if isOwner(uid);
+      allow write if false;
+    }
+
+    // Ledger: read own entries only; no client write
+    match /ledger/{txnId} {
+      allow read if isAuthenticated() && resource.data.uid == request.auth.uid;
+      allow write if false;
+    }
+
+    // Withdrawals: users read own; admins can read all; create own PENDING only; review via Cloud Functions
+    match /withdrawals/{withdrawId} {
+      allow read if isOwner(resource.data.uid) || isAdmin();
+      allow create if isAuthenticated() && request.resource.data.uid == request.auth.uid && request.resource.data.status == 'PENDING';
+      allow update, delete if false;
+    }
+
+    // System config: authenticated read; only superAdmin write
+    match /systemConfig/{docId} {
+      allow read if isAuthenticated();
+      allow write if isSuperAdmin();
+    }
+
+    // Audit logs: only admin/superAdmin read; write only via Cloud Functions
+    match /auditLogs/{logId} {
+      allow read if isAdmin();
+      allow write if false;
+    }
+  }
+}
