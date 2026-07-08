@@ -1,0 +1,89 @@
+# Standalone compose for aaPanel/shared hosting (ports 6379, 5432, 8000 often in use).
+# Redis and Postgres are not exposed on the host; only the API is (via DOCKER_API_PORT_MAPPING).
+# Use: docker compose -f docker-compose.aapanel.yml up -d
+
+services:
+  redis:
+    container_name: redis
+    image: redis/redis-stack-server:latest
+    volumes:
+      - redis-data:/data
+    environment:
+      - REDIS_ARGS=--appendonly yes
+    restart: unless-stopped
+
+  postgres:
+    container_name: postgres
+    image: pgvector/pgvector:pg17
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-ragpi}
+    restart: unless-stopped
+
+  api:
+    container_name: api
+    image: ragpi/ragpi:${RAGPI_VERSION:-latest}
+    ports:
+      - "${DOCKER_API_PORT_MAPPING:-127.0.0.1:8001:8000}"
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - POSTGRES_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-ragpi}
+    env_file: .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  task-worker:
+    container_name: task-worker
+    image: ragpi/ragpi:${RAGPI_VERSION:-latest}
+    command: celery --app=src.celery.celery_app worker --concurrency=2 --max-tasks-per-child=1 --loglevel=INFO
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - POSTGRES_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-ragpi}
+    env_file: .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  discord:
+    container_name: discord
+    image: ragpi/ragpi-discord:${RAGPI_DISCORD_VERSION:-latest}
+    environment:
+      - NODE_ENV=production
+      - RAGPI_BASE_URL=http://api:8000
+    env_file: .env
+    profiles:
+      - discord
+    restart: unless-stopped
+
+  slack:
+    container_name: slack
+    image: ragpi/ragpi-slack:${RAGPI_SLACK_VERSION:-latest}
+    environment:
+      - NODE_ENV=production
+      - RAGPI_BASE_URL=http://api:8000
+    env_file: .env
+    profiles:
+      - slack
+    restart: unless-stopped
+
+  recaptcha-gateway:
+    container_name: recaptcha-gateway
+    image: ragpi/ragpi-recaptcha-gateway:${RAGPI_RECAPTCHA_GATEWAY_VERSION:-latest}
+    ports:
+      - "${DOCKER_RECAPTCHA_GATEWAY_PORT_MAPPING:-127.0.0.1:8002:8001}"
+    environment:
+      - NODE_ENV=production
+      - PORT=8001
+      - RAGPI_BASE_URL=http://api:8000
+    env_file: .env
+    profiles:
+      - recaptcha-gateway
+    restart: unless-stopped
+
+volumes:
+  redis-data:
+  postgres-data:
