@@ -318,3 +318,12 @@ For more detailed documentation, visit [https://docs.ragpi.io](https://docs.ragp
 
 Built with ❤️ using FastAPI, PostgreSQL, Redis, and modern AI technologies.
 
+<!-- readme-seo: bannysukumar -->
+
+## Open source
+
+This repository is open source and maintained by [Banny Sukumar](https://github.com/Bannysukumar). Devbrain AI Backend is published so other developers can study the code and contribute.
+
+## License
+
+Released under the [MIT License](LICENSE). Copyright (c) 2026 Banny Sukumar. See [CONTRIBUTING.md](CONTRIBUTING.md) if you want to help.
